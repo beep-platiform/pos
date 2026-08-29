@@ -171,7 +171,7 @@ export default function POSClient({
       const result = Array.isArray(data) ? data[0] : data;
 
       setReceipt({
-        orderNumber: result?.order_number ?? "—",
+        orderNumber: result?.new_order_number ?? "—",
         businessName,
         orderType,
         cart,
