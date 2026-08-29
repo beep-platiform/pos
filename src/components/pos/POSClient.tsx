@@ -53,9 +53,6 @@ export default function POSClient({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [discount, setDiscount] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState(1000);
@@ -136,24 +133,13 @@ export default function POSClient({
     setPlacing(true);
     setError(null);
     try {
-      let customerId: string | null = selectedCustomerId;
-      if (!customerId && (customerName || customerPhone)) {
-        const { data: cust, error: custErr } = await supabase
-          .from("customers")
-          .insert({ business_id: businessId, name: customerName || null, phone: customerPhone || null, address: orderType === "delivery" ? deliveryAddress || null : null })
-          .select("id")
-          .single();
-        if (custErr) throw custErr;
-        customerId = cust.id;
-      }
-
       const paymentAmount = paymentMethod === "cash" ? total : amountTendered || total;
 
       const { data, error: rpcError } = await supabase.rpc("complete_sale", {
         p_business_id: businessId,
         p_order_type: orderType,
         p_table_id: orderType === "dine_in" ? selectedTableId : null,
-        p_customer_id: customerId,
+        p_customer_id: null,
         p_items: cart.map((l) => ({
           menu_item_id: l.menu_item_id,
           name: l.name,
@@ -175,6 +161,7 @@ export default function POSClient({
       const result = Array.isArray(data) ? data[0] : data;
 
       setReceipt({
+        orderId: result?.new_order_id ?? "",
         orderNumber: result?.new_order_number ?? "—",
         businessName,
         orderType,
@@ -194,9 +181,6 @@ export default function POSClient({
       // reset cart
       setCart([]);
       setDiscount(0);
-      setSelectedCustomerId(null);
-      setCustomerName("");
-      setCustomerPhone("");
       setDeliveryAddress("");
       setSelectedTableId(null);
       setShowCashModal(false);
@@ -263,13 +247,6 @@ export default function POSClient({
         tables={tables}
         selectedTableId={selectedTableId}
         onSelectTable={setSelectedTableId}
-        customers={customers}
-        selectedCustomerId={selectedCustomerId}
-        onSelectCustomer={(c) => setSelectedCustomerId(c?.id ?? null)}
-        customerName={customerName}
-        onCustomerName={setCustomerName}
-        customerPhone={customerPhone}
-        onCustomerPhone={setCustomerPhone}
         deliveryAddress={deliveryAddress}
         onDeliveryAddress={setDeliveryAddress}
         cart={cart}
@@ -302,7 +279,14 @@ export default function POSClient({
         />
       )}
 
-      {receipt && <ReceiptModal data={receipt} onClose={() => setReceipt(null)} />}
+      {receipt && (
+        <ReceiptModal
+          data={receipt}
+          businessId={businessId}
+          customers={customers}
+          onClose={() => setReceipt(null)}
+        />
+      )}
     </div>
   );
 }

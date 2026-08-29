@@ -2,7 +2,6 @@
 
 import { Banknote, CreditCard, QrCode, Plus, Minus, X, Percent } from "lucide-react";
 import type { CartLine, OrderType, PaymentMethod } from "@/types/database.types";
-import CustomerPicker, { CustomerOption } from "@/components/pos/CustomerPicker";
 
 export interface TableOption {
   id: string;
@@ -16,13 +15,6 @@ export default function OrderCart({
   tables,
   selectedTableId,
   onSelectTable,
-  customers,
-  selectedCustomerId,
-  onSelectCustomer,
-  customerName,
-  onCustomerName,
-  customerPhone,
-  onCustomerPhone,
   deliveryAddress,
   onDeliveryAddress,
   cart,
@@ -44,13 +36,6 @@ export default function OrderCart({
   tables: TableOption[];
   selectedTableId: string | null;
   onSelectTable: (id: string) => void;
-  customers: CustomerOption[];
-  selectedCustomerId: string | null;
-  onSelectCustomer: (c: CustomerOption | null) => void;
-  customerName: string;
-  onCustomerName: (v: string) => void;
-  customerPhone: string;
-  onCustomerPhone: (v: string) => void;
   deliveryAddress: string;
   onDeliveryAddress: (v: string) => void;
   cart: CartLine[];
@@ -115,26 +100,8 @@ export default function OrderCart({
           </div>
         )}
 
-        <div className="mt-3">
-          <CustomerPicker
-            customers={customers}
-            selectedCustomerId={selectedCustomerId}
-            name={customerName}
-            phone={customerPhone}
-            onSelectExisting={(c) => {
-              onSelectCustomer(c);
-              onCustomerName(c.name ?? "");
-              onCustomerPhone(c.phone ?? "");
-            }}
-            onNameChange={onCustomerName}
-            onPhoneChange={onCustomerPhone}
-            onClear={() => onSelectCustomer(null)}
-            placeholderName={orderType === "dine_in" ? "Walk-in customer (optional)" : "Customer name"}
-          />
-        </div>
-
         {orderType === "delivery" && (
-          <div className="mt-2">
+          <div className="mt-3">
             <input
               placeholder="Delivery address"
               value={deliveryAddress}
