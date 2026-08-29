@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/errors";
 import { Store, ArrowRight } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_CATEGORIES = ["Meals", "Drinks", "Fast Food", "Snacks", "Desserts"];
 
@@ -22,7 +23,8 @@ export default function OnboardingPage() {
   const [seedDemo, setSeedDemo] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      const user = data.user;
       if (!user) {
         router.replace("/login");
         return;
@@ -77,7 +79,7 @@ export default function OnboardingPage() {
           .select("id, name");
         if (catErr) throw catErr;
 
-        const findId = (n: string) => cats?.find((c) => c.name === n)?.id ?? null;
+        const findId = (n: string) => cats?.find((c: { id: string; name: string }) => c.name === n)?.id ?? null;
 
         await supabase.from("menu_items").insert([
           { business_id: business.id, category_id: findId("Fast Food"), name: "Chicken Burger", price: 3500, cost_price: 1800, prep_time_minutes: 10 },
