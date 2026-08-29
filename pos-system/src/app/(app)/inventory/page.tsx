@@ -1,10 +1,26 @@
-export default function Page() {
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import InventoryClient from "@/components/inventory/InventoryClient";
+
+export default async function InventoryPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+
+  const { data: items } = await supabase
+    .from("inventory_items")
+    .select("id, business_id, name, unit, quantity_on_hand, min_quantity, cost_per_unit, supplier_name, is_archived, updated_at")
+    .eq("business_id", ctx.businessId)
+    .eq("is_archived", false)
+    .order("name");
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Inventory</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Inventory module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
+    <InventoryClient
+      businessId={ctx.businessId}
+      currency={ctx.currency}
+      role={ctx.role}
+      initialItems={items ?? []}
+    />
   );
 }

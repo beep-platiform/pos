@@ -7,8 +7,6 @@ import { getErrorMessage } from "@/lib/errors";
 import { Store, ArrowRight } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
-const DEFAULT_CATEGORIES = ["Meals", "Drinks", "Fast Food", "Snacks", "Desserts"];
-
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -46,60 +44,21 @@ export default function OnboardingPage() {
         return;
       }
 
-      // 1. Create the business
-      const { data: business, error: bizErr } = await supabase
-        .from("businesses")
-        .insert({ name, phone, address, currency })
-        .select("id")
-        .single();
-      if (bizErr) throw bizErr;
-
-      // 2. Make this user the owner
-      const { error: memberErr } = await supabase.from("business_users").insert({
-        business_id: business.id,
-        user_id: user.id,
-        role: "owner",
+      // One atomic, server-side call: creates the business, makes this user its
+      // owner, ensures a profile row, and (optionally) seeds demo categories,
+      // menu items, and tables. Doing this client-side as separate inserts hits
+      // a chicken-and-egg RLS problem — you can't be granted visibility into a
+      // business until you're a member of it, but you can't become a member
+      // until it exists. The RPC runs as the database owner to cut through that.
+      const { error: rpcError } = await supabase.rpc("onboard_business", {
+        p_name: name,
+        p_phone: phone || null,
+        p_address: address || null,
+        p_currency: currency,
+        p_full_name: name ? `${name} Owner` : null,
+        p_seed_demo: seedDemo,
       });
-      if (memberErr) throw memberErr;
-
-      // 3. Ensure a profile row exists
-      await supabase.from("profiles").upsert({ id: user.id, full_name: name ? `${name} Owner` : null });
-
-      // 4. Seed demo categories + items if requested
-      if (seedDemo) {
-        const { data: cats, error: catErr } = await supabase
-          .from("menu_categories")
-          .insert(
-            DEFAULT_CATEGORIES.map((n, i) => ({
-              business_id: business.id,
-              name: n,
-              sort_order: i,
-            }))
-          )
-          .select("id, name");
-        if (catErr) throw catErr;
-
-        const findId = (n: string) => cats?.find((c: { id: string; name: string }) => c.name === n)?.id ?? null;
-
-        await supabase.from("menu_items").insert([
-          { business_id: business.id, category_id: findId("Fast Food"), name: "Chicken Burger", price: 3500, cost_price: 1800, prep_time_minutes: 10 },
-          { business_id: business.id, category_id: findId("Fast Food"), name: "Beef Burger", price: 3800, cost_price: 2000, prep_time_minutes: 10 },
-          { business_id: business.id, category_id: findId("Snacks"), name: "French Fries", price: 1500, cost_price: 600, prep_time_minutes: 6 },
-          { business_id: business.id, category_id: findId("Meals"), name: "Grilled Chicken", price: 5000, cost_price: 2800, prep_time_minutes: 15 },
-          { business_id: business.id, category_id: findId("Drinks"), name: "Coke", price: 1000, cost_price: 400, prep_time_minutes: 1 },
-          { business_id: business.id, category_id: findId("Drinks"), name: "Water", price: 500, cost_price: 150, prep_time_minutes: 1 },
-          { business_id: business.id, category_id: findId("Drinks"), name: "Fresh Juice", price: 2000, cost_price: 900, prep_time_minutes: 3 },
-        ]);
-      }
-
-      // 5. Seed a couple of tables
-      await supabase.from("restaurant_tables").insert(
-        Array.from({ length: 6 }).map((_, i) => ({
-          business_id: business.id,
-          table_number: `T${i + 1}`,
-          seats: 4,
-        }))
-      );
+      if (rpcError) throw rpcError;
 
       router.push("/pos");
       router.refresh();

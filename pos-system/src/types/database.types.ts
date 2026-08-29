@@ -125,3 +125,25 @@ export interface CartLine {
 }
 
 
+
+export type InventoryMovement =
+  | "purchase"
+  | "sale"
+  | "return"
+  | "waste"
+  | "adjustment"
+  | "transfer"
+  | "initial_stock";
+
+export interface InventoryItem {
+  id: string;
+  business_id: string;
+  name: string;
+  unit: string;
+  quantity_on_hand: number;
+  min_quantity: number;
+  cost_per_unit: number | null;
+  supplier_name: string | null;
+  is_archived: boolean;
+  updated_at: string;
+}
