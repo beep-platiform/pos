@@ -147,3 +147,21 @@ export interface InventoryItem {
   is_archived: boolean;
   updated_at: string;
 }
+
+export interface MenuItemFull {
+  id: string;
+  business_id: string;
+  category_id: string | null;
+  name: string;
+  description: string | null;
+  price: number;
+  cost_price: number | null;
+  available: boolean;
+  is_archived: boolean;
+  prep_time_minutes: number | null;
+}
+
+export interface RecipeLine {
+  inventory_item_id: string;
+  quantity_required: number;
+}
