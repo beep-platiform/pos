@@ -7,6 +7,7 @@ import { getErrorMessage } from "@/lib/errors";
 import CategoryBar from "@/components/pos/CategoryBar";
 import ProductGrid from "@/components/pos/ProductGrid";
 import OrderCart, { TableOption } from "@/components/pos/OrderCart";
+import { CustomerOption } from "@/components/pos/CustomerPicker";
 import CashModal from "@/components/pos/CashModal";
 import ReceiptModal, { ReceiptData } from "@/components/pos/ReceiptModal";
 import type { CartLine, OrderType, PaymentMethod } from "@/types/database.types";
@@ -33,6 +34,7 @@ export default function POSClient({
   categories,
   items,
   tables,
+  customers,
 }: {
   businessId: string;
   businessName: string;
@@ -42,6 +44,7 @@ export default function POSClient({
   categories: CategoryRow[];
   items: MenuItemRow[];
   tables: TableOption[];
+  customers: CustomerOption[];
 }) {
   const supabase = createClient();
 
@@ -50,6 +53,7 @@ export default function POSClient({
   const [cart, setCart] = useState<CartLine[]>([]);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -132,11 +136,11 @@ export default function POSClient({
     setPlacing(true);
     setError(null);
     try {
-      let customerId: string | null = null;
-      if ((orderType === "delivery" || orderType === "takeaway") && (customerName || customerPhone)) {
+      let customerId: string | null = selectedCustomerId;
+      if (!customerId && (customerName || customerPhone)) {
         const { data: cust, error: custErr } = await supabase
           .from("customers")
-          .insert({ business_id: businessId, name: customerName || null, phone: customerPhone || null, address: deliveryAddress || null })
+          .insert({ business_id: businessId, name: customerName || null, phone: customerPhone || null, address: orderType === "delivery" ? deliveryAddress || null : null })
           .select("id")
           .single();
         if (custErr) throw custErr;
@@ -190,6 +194,7 @@ export default function POSClient({
       // reset cart
       setCart([]);
       setDiscount(0);
+      setSelectedCustomerId(null);
       setCustomerName("");
       setCustomerPhone("");
       setDeliveryAddress("");
@@ -258,6 +263,9 @@ export default function POSClient({
         tables={tables}
         selectedTableId={selectedTableId}
         onSelectTable={setSelectedTableId}
+        customers={customers}
+        selectedCustomerId={selectedCustomerId}
+        onSelectCustomer={(c) => setSelectedCustomerId(c?.id ?? null)}
         customerName={customerName}
         onCustomerName={setCustomerName}
         customerPhone={customerPhone}

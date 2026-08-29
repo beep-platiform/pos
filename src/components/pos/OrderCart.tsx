@@ -2,6 +2,7 @@
 
 import { Banknote, CreditCard, QrCode, Plus, Minus, X, Percent } from "lucide-react";
 import type { CartLine, OrderType, PaymentMethod } from "@/types/database.types";
+import CustomerPicker, { CustomerOption } from "@/components/pos/CustomerPicker";
 
 export interface TableOption {
   id: string;
@@ -15,6 +16,9 @@ export default function OrderCart({
   tables,
   selectedTableId,
   onSelectTable,
+  customers,
+  selectedCustomerId,
+  onSelectCustomer,
   customerName,
   onCustomerName,
   customerPhone,
@@ -40,6 +44,9 @@ export default function OrderCart({
   tables: TableOption[];
   selectedTableId: string | null;
   onSelectTable: (id: string) => void;
+  customers: CustomerOption[];
+  selectedCustomerId: string | null;
+  onSelectCustomer: (c: CustomerOption | null) => void;
   customerName: string;
   onCustomerName: (v: string) => void;
   customerPhone: string;
@@ -108,37 +115,26 @@ export default function OrderCart({
           </div>
         )}
 
-        {orderType === "takeaway" && (
-          <div className="mt-3 space-y-2">
-            <input
-              placeholder="Customer name (optional)"
-              value={customerName}
-              onChange={(e) => onCustomerName(e.target.value)}
-              className="w-full text-xs rounded-lg border border-border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <input
-              placeholder="Phone (optional)"
-              value={customerPhone}
-              onChange={(e) => onCustomerPhone(e.target.value)}
-              className="w-full text-xs rounded-lg border border-border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-        )}
+        <div className="mt-3">
+          <CustomerPicker
+            customers={customers}
+            selectedCustomerId={selectedCustomerId}
+            name={customerName}
+            phone={customerPhone}
+            onSelectExisting={(c) => {
+              onSelectCustomer(c);
+              onCustomerName(c.name ?? "");
+              onCustomerPhone(c.phone ?? "");
+            }}
+            onNameChange={onCustomerName}
+            onPhoneChange={onCustomerPhone}
+            onClear={() => onSelectCustomer(null)}
+            placeholderName={orderType === "dine_in" ? "Walk-in customer (optional)" : "Customer name"}
+          />
+        </div>
 
         {orderType === "delivery" && (
-          <div className="mt-3 space-y-2">
-            <input
-              placeholder="Customer name"
-              value={customerName}
-              onChange={(e) => onCustomerName(e.target.value)}
-              className="w-full text-xs rounded-lg border border-border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <input
-              placeholder="Phone"
-              value={customerPhone}
-              onChange={(e) => onCustomerPhone(e.target.value)}
-              className="w-full text-xs rounded-lg border border-border px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
-            />
+          <div className="mt-2">
             <input
               placeholder="Delivery address"
               value={deliveryAddress}

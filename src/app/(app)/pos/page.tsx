@@ -29,6 +29,13 @@ export default async function POSPage() {
     supabase.from("businesses").select("tax_rate, currency, name").eq("id", ctx.businessId).single(),
   ]);
 
+  const { data: customers } = await supabase
+    .from("customers")
+    .select("id, name, phone")
+    .eq("business_id", ctx.businessId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
   return (
     <POSClient
       businessId={ctx.businessId}
@@ -39,6 +46,7 @@ export default async function POSPage() {
       categories={categories ?? []}
       items={items ?? []}
       tables={tables ?? []}
+      customers={customers ?? []}
     />
   );
 }

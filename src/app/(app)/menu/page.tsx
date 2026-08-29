@@ -1,10 +1,42 @@
-export default function Page() {
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import MenuClient from "@/components/menu/MenuClient";
+
+export default async function MenuPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+
+  const [{ data: categories }, { data: items }, { data: inventoryItems }] = await Promise.all([
+    supabase
+      .from("menu_categories")
+      .select("id, name, sort_order")
+      .eq("business_id", ctx.businessId)
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("menu_items")
+      .select("id, business_id, category_id, name, description, price, cost_price, available, is_archived, prep_time_minutes")
+      .eq("business_id", ctx.businessId)
+      .eq("is_archived", false)
+      .order("name"),
+    supabase
+      .from("inventory_items")
+      .select("id, name, unit")
+      .eq("business_id", ctx.businessId)
+      .eq("is_archived", false)
+      .order("name"),
+  ]);
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Menu</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Menu module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
+    <MenuClient
+      businessId={ctx.businessId}
+      currency={ctx.currency}
+      role={ctx.role}
+      categories={categories ?? []}
+      initialItems={items ?? []}
+      inventoryItems={inventoryItems ?? []}
+    />
   );
 }
