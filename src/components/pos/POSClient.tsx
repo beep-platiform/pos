@@ -19,6 +19,7 @@ interface MenuItemRow {
   price: number;
   image_url: string | null;
   available: boolean;
+  inStock: boolean;
 }
 interface CategoryRow {
   id: string;
@@ -96,6 +97,7 @@ export default function POSClient({
   cart.forEach((l) => (quantities[l.menu_item_id] = l.quantity));
 
   function addToCart(item: MenuItemRow) {
+    if (!item.available || !item.inStock) return;
     setCart((prev) => {
       const existing = prev.find((l) => l.menu_item_id === item.id);
       if (existing) {
@@ -105,6 +107,8 @@ export default function POSClient({
     });
   }
   function increment(id: string) {
+    const item = items.find((i) => i.id === id);
+    if (item && (!item.available || !item.inStock)) return;
     setCart((prev) => prev.map((l) => (l.menu_item_id === id ? { ...l, quantity: l.quantity + 1 } : l)));
   }
   function decrement(id: string) {
@@ -223,12 +227,13 @@ export default function POSClient({
 
         <div className="flex-1 overflow-y-auto mt-4 pr-1">
           <ProductGrid
-            items={filteredItems.map(({ id, name, price, image_url, available }) => ({
+            items={filteredItems.map(({ id, name, price, image_url, available, inStock }) => ({
               id,
               name,
               price,
               image_url,
               available,
+              inStock,
             }))}
             currency={currency}
             quantities={quantities}

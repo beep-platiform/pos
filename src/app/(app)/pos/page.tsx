@@ -46,10 +46,11 @@ export default async function POSPage({
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // The POS should only ever offer products that are real — backed by actual
-  // inventory stock, not a disconnected "menu item" that happens to exist.
-  // A dish only appears if it has at least one ingredient linked (has_recipe)
-  // and every linked ingredient currently has enough stock for one more unit.
+  // A menu item only ever appears on the POS if it's a real, inventory-backed
+  // product (has at least one recipe link) — no recipe means it's not really
+  // sellable yet. Out-of-stock items still show (dimmed, "Out of stock",
+  // can't be added) so staff can see why something is missing rather than it
+  // silently disappearing.
   const hasRecipe = new Set<string>();
   const outOfStock = new Set<string>();
   for (const row of recipes ?? []) {
@@ -61,9 +62,9 @@ export default async function POSPage({
     }
   }
 
-  const sellableItems = (items ?? []).filter(
-    (item) => item.available && hasRecipe.has(item.id) && !outOfStock.has(item.id)
-  );
+  const sellableItems = (items ?? [])
+    .filter((item) => hasRecipe.has(item.id))
+    .map((item) => ({ ...item, inStock: !outOfStock.has(item.id) }));
 
   return (
     <POSClient
