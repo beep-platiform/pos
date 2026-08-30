@@ -2,10 +2,15 @@ import { getSessionContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import POSClient from "@/components/pos/POSClient";
 
-export default async function POSPage() {
+export default async function POSPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ table?: string }>;
+}) {
   const ctx = await getSessionContext();
   if (!ctx) return null;
 
+  const { table: initialTableId } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: categories }, { data: items }, { data: tables }, { data: business }, { data: recipes }] =
@@ -41,12 +46,14 @@ export default async function POSPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  // A menu item is sellable right now if either it has no recipe configured
-  // (simple product mode) or every linked ingredient has enough stock for at
-  // least one unit. Items that can't currently be fulfilled are excluded from
-  // the POS grid entirely, rather than shown and only blocked at checkout.
+  // The POS should only ever offer products that are real — backed by actual
+  // inventory stock, not a disconnected "menu item" that happens to exist.
+  // A dish only appears if it has at least one ingredient linked (has_recipe)
+  // and every linked ingredient currently has enough stock for one more unit.
+  const hasRecipe = new Set<string>();
   const outOfStock = new Set<string>();
   for (const row of recipes ?? []) {
+    hasRecipe.add(row.menu_item_id);
     const onHand = (row as unknown as { inventory_items: { quantity_on_hand: number } | null }).inventory_items
       ?.quantity_on_hand;
     if (onHand === undefined || onHand === null || onHand < row.quantity_required) {
@@ -54,7 +61,9 @@ export default async function POSPage() {
     }
   }
 
-  const sellableItems = (items ?? []).filter((item) => item.available && !outOfStock.has(item.id));
+  const sellableItems = (items ?? []).filter(
+    (item) => item.available && hasRecipe.has(item.id) && !outOfStock.has(item.id)
+  );
 
   return (
     <POSClient
@@ -67,6 +76,7 @@ export default async function POSPage() {
       items={sellableItems}
       tables={tables ?? []}
       customers={customers ?? []}
+      initialTableId={initialTableId ?? null}
     />
   );
 }

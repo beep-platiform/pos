@@ -45,11 +45,12 @@ export default function OnboardingPage() {
       }
 
       // One atomic, server-side call: creates the business, makes this user its
-      // owner, ensures a profile row, and (optionally) seeds demo categories,
-      // menu items, and tables. Doing this client-side as separate inserts hits
-      // a chicken-and-egg RLS problem — you can't be granted visibility into a
-      // business until you're a member of it, but you can't become a member
-      // until it exists. The RPC runs as the database owner to cut through that.
+      // owner, ensures a profile row, and (optionally) seeds starter categories
+      // and empty tables (no fake menu items — real products only). Doing this
+      // client-side as separate inserts hits a chicken-and-egg RLS problem —
+      // you can't be granted visibility into a business until you're a member
+      // of it, but you can't become a member until it exists. The RPC runs as
+      // the database owner to cut through that.
       const { error: rpcError } = await supabase.rpc("onboard_business", {
         p_name: name,
         p_phone: phone || null,
@@ -138,9 +139,9 @@ export default function OnboardingPage() {
           <div className="space-y-4">
             <label className="flex items-center gap-2 text-sm bg-background rounded-lg px-3 py-3 border border-border">
               <input type="checkbox" checked={seedDemo} onChange={(e) => setSeedDemo(e.target.checked)} />
-              Add demo categories &amp; menu items (Meals, Drinks, Fast Food…) so I can start selling right away
+              Add starter categories (Meals, Drinks, Fast Food…) and 6 tables so I have somewhere to start
             </label>
-            <p className="text-xs text-muted">You can edit or remove these anytime from Menu Management. Marked clearly as demo data.</p>
+            <p className="text-xs text-muted">No fake products — add your real menu items afterward from the Menu page.</p>
 
             {error && <p className="text-sm text-danger">{error}</p>}
 

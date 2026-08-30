@@ -35,6 +35,7 @@ export default function POSClient({
   items,
   tables,
   customers,
+  initialTableId,
 }: {
   businessId: string;
   businessName: string;
@@ -45,6 +46,7 @@ export default function POSClient({
   items: MenuItemRow[];
   tables: TableOption[];
   customers: CustomerOption[];
+  initialTableId?: string | null;
 }) {
   const supabase = createClient();
 
@@ -52,7 +54,7 @@ export default function POSClient({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
+  const [selectedTableId, setSelectedTableId] = useState<string | null>(initialTableId ?? null);
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [discount, setDiscount] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState(1000);

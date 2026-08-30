@@ -1,10 +1,37 @@
-export default function Page() {
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import TablesClient from "@/components/tables/TablesClient";
+
+export default async function TablesPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+
+  const { data: tables } = await supabase
+    .from("restaurant_tables")
+    .select("id, table_number, seats, status, current_order_id")
+    .eq("business_id", ctx.businessId)
+    .order("table_number");
+
+  const orderIds = (tables ?? []).map((t) => t.current_order_id).filter((id): id is string => !!id);
+
+  let ordersById: Record<string, { order_number: string; total: number; status: string; order_type: string }> = {};
+  if (orderIds.length > 0) {
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("id, order_number, total, status, order_type")
+      .in("id", orderIds);
+    ordersById = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Tables</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Tables module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
+    <TablesClient
+      businessId={ctx.businessId}
+      currency={ctx.currency}
+      role={ctx.role}
+      initialTables={tables ?? []}
+      ordersById={ordersById}
+    />
   );
 }

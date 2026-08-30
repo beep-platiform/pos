@@ -70,7 +70,7 @@ export default function MenuClient({
         <div>
           <h1 className="text-xl font-semibold mb-1">Menu</h1>
           <p className="text-sm text-muted">
-            Attach a recipe to a dish so selling it automatically deducts ingredients from Inventory.
+            A dish only shows up on the POS once it&apos;s linked to real inventory — click <strong>Recipe</strong> to connect it, and selling it will automatically deduct stock.
           </p>
         </div>
         {canManage && (
@@ -425,7 +425,7 @@ function RecipeModal({
 
             {lines.length === 0 && (
               <p className="text-xs text-muted">
-                No ingredients linked yet — this dish won&apos;t affect inventory until you add some.
+                No ingredients linked yet — this dish won&apos;t appear on the POS until you add at least one.
               </p>
             )}
           </div>
