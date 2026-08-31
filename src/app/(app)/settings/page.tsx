@@ -1,10 +1,19 @@
-export default function Page() {
-  return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Settings</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Settings module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
-  );
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import SettingsClient from "@/components/settings/SettingsClient";
+
+export default async function SettingsPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id, name, phone, email, address, currency, tax_rate")
+    .eq("id", ctx.businessId)
+    .single();
+
+  if (!business) return null;
+
+  return <SettingsClient business={business} />;
 }

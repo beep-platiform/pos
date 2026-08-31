@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, ChefHat, Archive, PackageCheck } from "lucide-react";
+import { Plus, X, ChefHat, Archive, PackageCheck, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/errors";
 import type { MenuItemFull, RecipeLine } from "@/types/database.types";
@@ -59,6 +59,17 @@ export default function MenuClient({
     const { error: err } = await supabase.from("menu_items").update({ is_archived: true }).eq("id", item.id);
     if (err) {
       setError(getErrorMessage(err, "Unable to archive this item."));
+      return;
+    }
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+  }
+
+  async function deleteItem(item: MenuItemFull) {
+    if (!confirm(`Permanently delete "${item.name}"? A backup copy is kept, but it will disappear everywhere immediately.`))
+      return;
+    const { error: err } = await supabase.rpc("delete_menu_item", { p_id: item.id });
+    if (err) {
+      setError(getErrorMessage(err, "Unable to delete this item."));
       return;
     }
     setItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -130,10 +141,19 @@ export default function MenuClient({
                       </button>
                       <button
                         onClick={() => archiveItem(item)}
-                        className="text-muted hover:text-danger p-1 align-middle"
+                        className="text-muted hover:text-foreground p-1 align-middle"
                         aria-label="Archive"
+                        title="Archive"
                       >
                         <Archive size={13} className="inline" />
+                      </button>
+                      <button
+                        onClick={() => deleteItem(item)}
+                        className="text-muted hover:text-danger p-1 align-middle"
+                        aria-label="Delete"
+                        title="Delete permanently"
+                      >
+                        <Trash2 size={13} className="inline" />
                       </button>
                     </td>
                   )}

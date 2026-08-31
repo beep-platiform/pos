@@ -45,6 +45,7 @@ export default function TablesClient({
 }) {
   const supabase = createClient();
   const canManage = ["owner", "manager", "cashier", "waiter"].includes(role);
+  const canDelete = role === "owner" || role === "manager";
 
   const [tables, setTables] = useState<TableRow[]>(initialTables);
   const [selected, setSelected] = useState<TableRow | null>(null);
@@ -59,6 +60,17 @@ export default function TablesClient({
     }
     setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, status } : t)));
     setSelected((prev) => (prev && prev.id === table.id ? { ...prev, status } : prev));
+  }
+
+  async function deleteTable(table: TableRow) {
+    if (!confirm(`Delete table ${table.table_number}? A backup copy is kept.`)) return;
+    const { error: err } = await supabase.rpc("delete_table", { p_id: table.id });
+    if (err) {
+      setError(getErrorMessage(err, "Unable to delete this table."));
+      return;
+    }
+    setTables((prev) => prev.filter((t) => t.id !== table.id));
+    setSelected(null);
   }
 
   return (
@@ -123,7 +135,9 @@ export default function TablesClient({
           order={selected.current_order_id ? ordersById[selected.current_order_id] : null}
           currency={currency}
           canManage={canManage}
+          canDelete={canDelete}
           onSetStatus={(status) => setStatus(selected, status)}
+          onDelete={() => deleteTable(selected)}
           onClose={() => setSelected(null)}
         />
       )}
@@ -147,14 +161,18 @@ function TableDetailModal({
   order,
   currency,
   canManage,
+  canDelete,
   onSetStatus,
+  onDelete,
   onClose,
 }: {
   table: TableRow;
   order: OrderSummary | null;
   currency: string;
   canManage: boolean;
+  canDelete: boolean;
   onSetStatus: (status: TableStatus) => void;
+  onDelete: () => void;
   onClose: () => void;
 }) {
   return (
@@ -210,6 +228,15 @@ function TableDetailModal({
                 </button>
               ))}
             </div>
+
+            {canDelete && !order && (
+              <button
+                onClick={onDelete}
+                className="w-full mt-4 text-xs font-medium text-danger border border-danger/30 py-2 rounded-lg hover:bg-red-50"
+              >
+                Delete table
+              </button>
+            )}
           </>
         )}
       </div>

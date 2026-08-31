@@ -19,6 +19,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seedDemo, setSeedDemo] = useState(true);
+  const [invite, setInvite] = useState<{ business_name: string; role: string } | null>(null);
+  const [checkingInvite, setCheckingInvite] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
@@ -28,9 +30,29 @@ export default function OnboardingPage() {
         return;
       }
       setCheckingSession(false);
+      supabase.rpc("get_my_invite").then(({ data: inviteRows }: { data: { business_name: string; role: string }[] | null }) => {
+        const row = Array.isArray(inviteRows) ? inviteRows[0] : null;
+        if (row) setInvite(row);
+        setCheckingInvite(false);
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleAcceptInvite() {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: err } = await supabase.rpc("accept_invite");
+      if (err) throw err;
+      router.push("/pos");
+      router.refresh();
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to accept this invite. Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleCreate() {
     setLoading(true);
@@ -73,8 +95,30 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md bg-surface rounded-2xl shadow-sm border border-border p-8">
-        {checkingSession ? (
+        {checkingSession || checkingInvite ? (
           <p className="text-sm text-muted text-center py-10">Loading…</p>
+        ) : invite ? (
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white">
+                <Store size={20} />
+              </div>
+              <p className="font-semibold">You&apos;re invited</p>
+            </div>
+            <p className="text-sm text-foreground/80 mb-1">
+              Join <span className="font-semibold">{invite.business_name}</span> as{" "}
+              <span className="font-semibold capitalize">{invite.role}</span>.
+            </p>
+            <p className="text-xs text-muted mb-5">You&apos;ll get access right away once you accept.</p>
+            {error && <p className="text-sm text-danger mb-3">{error}</p>}
+            <button
+              disabled={loading}
+              onClick={handleAcceptInvite}
+              className="w-full bg-primary hover:bg-primary-dark text-white font-medium py-2.5 rounded-lg transition disabled:opacity-60"
+            >
+              {loading ? "Joining…" : `Join ${invite.business_name}`}
+            </button>
+          </div>
         ) : (
           <>
         <div className="flex items-center gap-2 mb-6">

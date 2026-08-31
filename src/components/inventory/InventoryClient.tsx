@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, PackageSearch, AlertTriangle, X, History, Archive } from "lucide-react";
+import { Plus, PackageSearch, AlertTriangle, X, History, Archive, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/errors";
 import type { InventoryItem, InventoryMovement } from "@/types/database.types";
@@ -53,6 +53,17 @@ export default function InventoryClient({
     const { error: err } = await supabase.from("inventory_items").update({ is_archived: true }).eq("id", item.id);
     if (err) {
       setError(getErrorMessage(err, "Unable to archive this item."));
+      return;
+    }
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+  }
+
+  async function deleteItem(item: InventoryItem) {
+    if (!confirm(`Permanently delete "${item.name}"? A backup copy is kept, but it will disappear everywhere immediately.`))
+      return;
+    const { error: err } = await supabase.rpc("delete_inventory_item", { p_id: item.id });
+    if (err) {
+      setError(getErrorMessage(err, "Unable to delete this item."));
       return;
     }
     setItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -155,10 +166,19 @@ export default function InventoryClient({
                         </button>
                         <button
                           onClick={() => archiveItem(item)}
-                          className="text-xs text-muted hover:text-danger p-1 align-middle"
+                          className="text-muted hover:text-foreground p-1 align-middle"
                           aria-label="Archive"
+                          title="Archive"
                         >
                           <Archive size={13} className="inline" />
+                        </button>
+                        <button
+                          onClick={() => deleteItem(item)}
+                          className="text-muted hover:text-danger p-1 align-middle"
+                          aria-label="Delete"
+                          title="Delete permanently"
+                        >
+                          <Trash2 size={13} className="inline" />
                         </button>
                       </td>
                     )}

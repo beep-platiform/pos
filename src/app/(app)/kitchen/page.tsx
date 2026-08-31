@@ -1,10 +1,48 @@
-export default function Page() {
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import KitchenClient from "@/components/kitchen/KitchenClient";
+
+export default async function KitchenPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, order_number, order_type, status, notes, created_at, restaurant_tables(table_number)")
+    .eq("business_id", ctx.businessId)
+    .in("status", ["new", "preparing"])
+    .order("created_at", { ascending: true });
+
+  const orderIds = (orders ?? []).map((o) => o.id);
+  let itemsByOrder: Record<string, { name_snapshot: string; quantity: number; note: string | null }[]> = {};
+  if (orderIds.length > 0) {
+    const { data: items } = await supabase
+      .from("order_items")
+      .select("order_id, name_snapshot, quantity, note")
+      .in("order_id", orderIds);
+    itemsByOrder = {};
+    for (const it of items ?? []) {
+      if (!itemsByOrder[it.order_id]) itemsByOrder[it.order_id] = [];
+      itemsByOrder[it.order_id].push(it);
+    }
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Kitchen</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Kitchen module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
+    <KitchenClient
+      initialOrders={(orders ?? []) as unknown as KitchenOrder[]}
+      itemsByOrder={itemsByOrder}
+    />
   );
+}
+
+export interface KitchenOrder {
+  id: string;
+  order_number: string;
+  order_type: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  restaurant_tables: { table_number: string } | null;
 }

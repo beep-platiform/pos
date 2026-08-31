@@ -165,3 +165,36 @@ export interface RecipeLine {
   inventory_item_id: string;
   quantity_required: number;
 }
+
+export interface OrderRow {
+  id: string;
+  order_number: string;
+  order_type: OrderType;
+  status: OrderStatus;
+  table_id: string | null;
+  customer_id: string | null;
+  delivery_person_id: string | null;
+  delivery_address: string | null;
+  total: number;
+  payment_status: PaymentStatus;
+  amount_paid: number;
+  created_at: string;
+}
+
+export interface OrderItemRow {
+  id: string;
+  order_id: string;
+  name_snapshot: string;
+  quantity: number;
+  price_snapshot: number;
+  note: string | null;
+}
+
+export interface StaffMember {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  active: boolean;
+  email: string | null;
+  full_name: string | null;
+}

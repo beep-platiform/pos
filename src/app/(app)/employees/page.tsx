@@ -1,10 +1,29 @@
-export default function Page() {
+import { getSessionContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import EmployeesClient from "@/components/employees/EmployeesClient";
+
+export default async function EmployeesPage() {
+  const ctx = await getSessionContext();
+  if (!ctx) return null;
+
+  const supabase = await createClient();
+
+  const [{ data: staff }, { data: invites }] = await Promise.all([
+    supabase.rpc("list_staff"),
+    supabase
+      .from("invites")
+      .select("id, email, role, accepted, created_at")
+      .eq("business_id", ctx.businessId)
+      .eq("accepted", false)
+      .order("created_at", { ascending: false }),
+  ]);
+
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-2">Employees</h1>
-      <div className="bg-surface border border-border rounded-2xl p-8 text-center text-muted text-sm max-w-md">
-        The Employees module is scheduled for the next build phase. The Dashboard and POS screens are fully wired to your live database right now.
-      </div>
-    </div>
+    <EmployeesClient
+      role={ctx.role}
+      currentUserId={ctx.userId}
+      initialStaff={staff ?? []}
+      initialInvites={invites ?? []}
+    />
   );
 }
