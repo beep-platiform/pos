@@ -20,6 +20,7 @@ interface MenuItemRow {
   image_url: string | null;
   available: boolean;
   inStock: boolean;
+  maxQuantity: number;
 }
 interface CategoryRow {
   id: string;
@@ -97,10 +98,11 @@ export default function POSClient({
   cart.forEach((l) => (quantities[l.menu_item_id] = l.quantity));
 
   function addToCart(item: MenuItemRow) {
-    if (!item.available || !item.inStock) return;
+    if (!item.available || !item.inStock || item.maxQuantity < 1) return;
     setCart((prev) => {
       const existing = prev.find((l) => l.menu_item_id === item.id);
       if (existing) {
+        if (existing.quantity >= item.maxQuantity) return prev;
         return prev.map((l) => (l.menu_item_id === item.id ? { ...l, quantity: l.quantity + 1 } : l));
       }
       return [...prev, { menu_item_id: item.id, name: item.name, price: item.price, quantity: 1 }];
@@ -109,7 +111,13 @@ export default function POSClient({
   function increment(id: string) {
     const item = items.find((i) => i.id === id);
     if (item && (!item.available || !item.inStock)) return;
-    setCart((prev) => prev.map((l) => (l.menu_item_id === id ? { ...l, quantity: l.quantity + 1 } : l)));
+    setCart((prev) =>
+      prev.map((l) => {
+        if (l.menu_item_id !== id) return l;
+        if (item && l.quantity >= item.maxQuantity) return l;
+        return { ...l, quantity: l.quantity + 1 };
+      })
+    );
   }
   function decrement(id: string) {
     setCart((prev) =>
@@ -227,13 +235,14 @@ export default function POSClient({
 
         <div className="flex-1 overflow-y-auto mt-4 pr-1">
           <ProductGrid
-            items={filteredItems.map(({ id, name, price, image_url, available, inStock }) => ({
+            items={filteredItems.map(({ id, name, price, image_url, available, inStock, maxQuantity }) => ({
               id,
               name,
               price,
               image_url,
               available,
               inStock,
+              maxQuantity,
             }))}
             currency={currency}
             quantities={quantities}

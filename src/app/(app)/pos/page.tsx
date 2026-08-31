@@ -48,23 +48,27 @@ export default async function POSPage({
 
   // A menu item only ever appears on the POS if it's a real, inventory-backed
   // product (has at least one recipe link) — no recipe means it's not really
-  // sellable yet. Out-of-stock items still show (dimmed, "Out of stock",
-  // can't be added) so staff can see why something is missing rather than it
-  // silently disappearing.
+  // sellable yet. maxQuantity is how many more times this dish can be sold
+  // right now, computed across every linked ingredient (whichever runs out
+  // first caps it) — the cart uses this to stop staff from adding more than
+  // physically exists, instead of only finding out at checkout.
   const hasRecipe = new Set<string>();
-  const outOfStock = new Set<string>();
+  const maxQuantityByItem = new Map<string, number>();
   for (const row of recipes ?? []) {
     hasRecipe.add(row.menu_item_id);
     const onHand = (row as unknown as { inventory_items: { quantity_on_hand: number } | null }).inventory_items
       ?.quantity_on_hand;
-    if (onHand === undefined || onHand === null || onHand < row.quantity_required) {
-      outOfStock.add(row.menu_item_id);
-    }
+    const possible = onHand === undefined || onHand === null ? 0 : Math.floor(onHand / row.quantity_required);
+    const current = maxQuantityByItem.get(row.menu_item_id);
+    maxQuantityByItem.set(row.menu_item_id, current === undefined ? possible : Math.min(current, possible));
   }
 
   const sellableItems = (items ?? [])
     .filter((item) => hasRecipe.has(item.id))
-    .map((item) => ({ ...item, inStock: !outOfStock.has(item.id) }));
+    .map((item) => {
+      const maxQuantity = maxQuantityByItem.get(item.id) ?? 0;
+      return { ...item, inStock: maxQuantity > 0, maxQuantity };
+    });
 
   return (
     <POSClient

@@ -15,6 +15,7 @@ interface InventoryOption {
   id: string;
   name: string;
   unit: string;
+  quantity_on_hand: number;
 }
 
 export default function MenuClient({
@@ -340,11 +341,9 @@ function RecipeModal({
       });
   }
 
-  function addLine() {
-    const used = new Set(lines.map((l) => l.inventory_item_id));
-    const next = inventoryItems.find((i) => !used.has(i.id));
-    if (!next) return;
-    setLines((prev) => [...prev, { inventory_item_id: next.id, quantity_required: 0.1 }]);
+  function addLine(inventoryItemId: string) {
+    if (!inventoryItemId) return;
+    setLines((prev) => [...prev, { inventory_item_id: inventoryItemId, quantity_required: 1 }]);
   }
 
   function updateLine(index: number, patch: Partial<RecipeLine>) {
@@ -393,7 +392,8 @@ function RecipeModal({
         </button>
         <h3 className="font-semibold text-lg mb-1">Recipe for {menuItem.name}</h3>
         <p className="text-xs text-muted mb-4 flex items-center gap-1">
-          <PackageCheck size={13} /> Selling this dish will auto-deduct these ingredients.
+          <PackageCheck size={13} /> Selling this dish will auto-deduct these ingredients. Quantity is how much
+          <strong> one sale</strong> uses — not your total stock.
         </p>
 
         {loading ? (
@@ -403,44 +403,68 @@ function RecipeModal({
             No inventory items yet — add some on the Inventory page first.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {lines.map((line, idx) => {
               const invItem = inventoryItems.find((i) => i.id === line.inventory_item_id);
+              const usedElsewhere = new Set(lines.filter((_, i) => i !== idx).map((l) => l.inventory_item_id));
               return (
-                <div key={idx} className="flex items-center gap-2">
-                  <select
-                    value={line.inventory_item_id}
-                    onChange={(e) => updateLine(idx, { inventory_item_id: e.target.value })}
-                    className="flex-1 rounded-lg border border-border px-2 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    {inventoryItems.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={line.quantity_required}
-                    onChange={(e) => updateLine(idx, { quantity_required: Number(e.target.value) || 0 })}
-                    className="w-20 rounded-lg border border-border px-2 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                  <span className="text-xs text-muted w-8">{invItem?.unit}</span>
-                  <button onClick={() => removeLine(idx)} className="text-muted hover:text-danger p-1">
-                    <X size={13} />
-                  </button>
+                <div key={idx}>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={line.inventory_item_id}
+                      onChange={(e) => updateLine(idx, { inventory_item_id: e.target.value })}
+                      className="flex-1 rounded-lg border border-border px-2 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {inventoryItems
+                        .filter((i) => i.id === line.inventory_item_id || !usedElsewhere.has(i.id))
+                        .map((i) => (
+                          <option key={i.id} value={i.id}>
+                            {i.name} — {i.quantity_on_hand.toLocaleString()} {i.unit} in stock
+                          </option>
+                        ))}
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={line.quantity_required}
+                      onChange={(e) => updateLine(idx, { quantity_required: Number(e.target.value) || 0 })}
+                      className="w-20 rounded-lg border border-border px-2 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <span className="text-xs text-muted w-8">{invItem?.unit}</span>
+                    <button onClick={() => removeLine(idx)} className="text-muted hover:text-danger p-1">
+                      <X size={13} />
+                    </button>
+                  </div>
+                  {invItem && (
+                    <p className="text-[11px] text-muted mt-1 ml-0.5">
+                      Uses {line.quantity_required || 0} {invItem.unit} per sale · {invItem.quantity_on_hand.toLocaleString()}{" "}
+                      {invItem.unit} currently in stock → sellable{" "}
+                      <strong>
+                        {line.quantity_required > 0 ? Math.floor(invItem.quantity_on_hand / line.quantity_required) : 0}
+                      </strong>{" "}
+                      more times
+                    </p>
+                  )}
                 </div>
               );
             })}
 
             {lines.length < inventoryItems.length && (
-              <button
-                onClick={addLine}
-                className="flex items-center gap-1 text-xs font-medium text-primary-dark hover:underline mt-1"
+              <select
+                value=""
+                onChange={(e) => addLine(e.target.value)}
+                className="w-full text-xs font-medium text-primary-dark border border-dashed border-primary/40 rounded-lg px-2 py-2 outline-none bg-primary-light/40"
               >
-                <Plus size={13} /> Add ingredient
-              </button>
+                <option value="">+ Add ingredient…</option>
+                {inventoryItems
+                  .filter((i) => !lines.some((l) => l.inventory_item_id === i.id))
+                  .map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.name} — {i.quantity_on_hand.toLocaleString()} {i.unit} in stock
+                    </option>
+                  ))}
+              </select>
             )}
 
             {lines.length === 0 && (

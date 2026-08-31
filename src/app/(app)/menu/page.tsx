@@ -23,7 +23,7 @@ export default async function MenuPage() {
       .order("name"),
     supabase
       .from("inventory_items")
-      .select("id, name, unit")
+      .select("id, name, unit, quantity_on_hand")
       .eq("business_id", ctx.businessId)
       .eq("is_archived", false)
       .order("name"),

@@ -9,6 +9,7 @@ export interface ProductCardItem {
   image_url: string | null;
   available: boolean;
   inStock: boolean;
+  maxQuantity: number;
 }
 
 export default function ProductGrid({
@@ -40,6 +41,7 @@ export default function ProductGrid({
       {items.map((item) => {
         const qty = quantities[item.id] ?? 0;
         const sellable = item.available && item.inStock;
+        const atLimit = qty >= item.maxQuantity;
         return (
           <div
             key={item.id}
@@ -62,6 +64,11 @@ export default function ProductGrid({
                     <PackageX size={12} /> Out of stock
                   </span>
                 </div>
+              )}
+              {item.inStock && item.maxQuantity <= 5 && (
+                <span className="absolute top-1.5 right-1.5 bg-white/95 text-warning text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                  {item.maxQuantity} left
+                </span>
               )}
             </div>
             <p className="text-sm font-medium leading-tight line-clamp-2 min-h-9">{item.name}</p>
@@ -87,9 +94,10 @@ export default function ProductGrid({
                 </button>
                 <span className="text-white text-sm font-semibold">{qty}</span>
                 <button
-                  disabled={!sellable}
+                  disabled={!sellable || atLimit}
                   onClick={() => onIncrement(item.id)}
                   className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center text-white disabled:opacity-40"
+                  title={atLimit ? "No more in stock" : undefined}
                 >
                   <Plus size={14} />
                 </button>
